@@ -26,27 +26,46 @@ let currentTab = 'products'
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData()
+  // Verify premium
   await verifyPremiumOnLoad()
   render()
   setupEventListeners()
 })
 
-// Verify premium on each load - check if Chrome account matches
+// Verify premium on each load
 async function verifyPremiumOnLoad() {
+  if (!isPremium || !premiumEmail) return // Not premium
+  
+  console.log('Verifying premium for:', premiumEmail)
+  
+  // Check if stored email is in allowed list
+  const allowedEmails = await fetchAllowedEmails()
+  console.log('Allowed emails:', allowedEmails)
+  
+  if (allowedEmails.includes(premiumEmail)) {
+    console.log('Premium verified - email in allowed list')
+    return // Keep premium active
+  }
+  
+  // Try to get Chrome email
+  let currentEmail = ''
   try {
     const userInfo = await chrome.identity.getProfileUserInfo()
-    const currentEmail = userInfo.email?.toLowerCase() || ''
+    currentEmail = userInfo.email?.toLowerCase() || ''
+    console.log('Chrome email:', currentEmail)
     
-    if (isPremium && premiumEmail && currentEmail !== premiumEmail) {
-      // Email changed - revoke premium
-      isPremium = false
-      premiumEmail = ''
+    if (currentEmail && allowedEmails.includes(currentEmail)) {
+      premiumEmail = currentEmail
       await saveData()
-      console.log('Premium revoked - email changed')
+      console.log('Premium updated to Chrome email')
+      return
     }
   } catch (e) {
-    console.log('Could not verify premium:', e)
+    console.log('Could not get Chrome email:', e)
   }
+  
+  // Premium not valid
+  console.log('Premium revoked')
 }
 
 async function loadData() {
