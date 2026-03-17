@@ -20,7 +20,8 @@
   "permissions": [
     "storage",
     "notifications",
-    "tabs"
+    "tabs",
+    "identity"
   ],
   "host_permissions": [
     "*://*.daraz.pk/*",
