@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Daraz Price Drop Alert",
+  "version": "1.0.0",
+  "description": "Track product prices on Daraz.pk and get notified when prices drop",
+  "action": {
+    "default_popup": "popup/index.html"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.daraz.pk/*"],
+      "js": ["content-script/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "notifications",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.daraz.pk/*",
+    "*://*.lazcdn.com/*",
+    "*://*.lzd.co/*",
+    "*://img.daraz.com/*"
+  ]
+}
