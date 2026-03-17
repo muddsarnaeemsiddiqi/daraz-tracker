@@ -146,38 +146,58 @@ async function fetchAllowedEmails() {
   }
 }
 
-// Handle premium upgrade - requires logged in Chrome account
+// Handle premium upgrade - verifies email against cloud list
 async function handlePremiumUpgrade() {
-  // Get the currently signed-in Chrome user
+  // Try to get Chrome account email, but don't require it
   let userEmail = ''
   
   try {
     const userInfo = await chrome.identity.getProfileUserInfo()
     userEmail = userInfo.email?.toLowerCase() || ''
   } catch (e) {
-    console.log('Could not get Chrome profile info:', e)
+    console.log('Chrome identity not available')
   }
   
-  if (!userEmail) {
-    alert('Please sign in to Chrome with your Gmail account to verify premium access.\n\n1. Click your profile icon in Chrome\n2. Sign in or select your account\n3. Try again')
+  // If we have Chrome email, try that first
+  if (userEmail) {
+    const btn = document.getElementById('upgrade-btn')
+    if (btn) btn.textContent = 'Verifying...'
+    
+    const allowedEmails = await fetchAllowedEmails()
+    
+    if (allowedEmails.includes(userEmail)) {
+      isPremium = true
+      premiumEmail = userEmail
+      await saveData()
+      render()
+      alert('Premium activated for ' + userEmail + '!')
+      return
+    }
+  }
+  
+  // If Chrome email not available or not authorized, ask user to enter email manually
+  const emailInput = document.getElementById('upgrade-email')
+  const email = emailInput?.value?.trim().toLowerCase()
+  
+  if (!email) {
+    alert('Please enter your Gmail address to verify premium access.')
     return
   }
   
-  // Check if this Chrome email is allowed
   const btn = document.getElementById('upgrade-btn')
   if (btn) btn.textContent = 'Verifying...'
   
   const allowedEmails = await fetchAllowedEmails()
   
-  if (allowedEmails.includes(userEmail)) {
+  if (allowedEmails.includes(email)) {
     isPremium = true
-    premiumEmail = userEmail  // Store the email
+    premiumEmail = email
     await saveData()
     render()
-    alert('Premium activated for ' + userEmail + '!')
+    alert('Premium activated for ' + email + '!')
   } else {
     if (btn) btn.textContent = 'Verify'
-    alert('Premium not available for: ' + userEmail + '\n\nThis email must be added by the developer.\nContact: L104732@gmail.com')
+    alert('Premium not available for: ' + email + '\n\nThis email must be added by the developer.\nContact: L104732@gmail.com')
   }
 }
 
