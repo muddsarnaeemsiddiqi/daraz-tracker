@@ -27,6 +27,7 @@
     "*://*.daraz.pk/*",
     "*://*.lazcdn.com/*",
     "*://*.lzd.co/*",
-    "*://img.daraz.com/*"
+    "*://img.daraz.com/*",
+    "*://raw.githubusercontent.com/*"
   ]
 }
