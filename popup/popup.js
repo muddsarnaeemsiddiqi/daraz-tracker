@@ -18,6 +18,7 @@ const icons = {
 // State
 let products = []
 let isPremium = false
+let premiumEmail = ''  // Store the email that has premium
 let checkInterval = 24
 let showSettings = false
 let currentTab = 'products'
@@ -25,9 +26,28 @@ let currentTab = 'products'
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData()
+  await verifyPremiumOnLoad()
   render()
   setupEventListeners()
 })
+
+// Verify premium on each load - check if Chrome account matches
+async function verifyPremiumOnLoad() {
+  try {
+    const userInfo = await chrome.identity.getProfileUserInfo()
+    const currentEmail = userInfo.email?.toLowerCase() || ''
+    
+    if (isPremium && premiumEmail && currentEmail !== premiumEmail) {
+      // Email changed - revoke premium
+      isPremium = false
+      premiumEmail = ''
+      await saveData()
+      console.log('Premium revoked - email changed')
+    }
+  } catch (e) {
+    console.log('Could not verify premium:', e)
+  }
+}
 
 async function loadData() {
   try {
@@ -36,6 +56,7 @@ async function loadData() {
       const parsed = JSON.parse(data[STORAGE_KEY])
       products = parsed.products || []
       isPremium = parsed.isPremium || false
+      premiumEmail = parsed.premiumEmail || ''
       checkInterval = parsed.checkInterval || 24
     }
   } catch (e) {
@@ -45,7 +66,7 @@ async function loadData() {
 
 async function saveData() {
   await chrome.storage.local.set({
-    [STORAGE_KEY]: JSON.stringify({ products, isPremium, checkInterval })
+    [STORAGE_KEY]: JSON.stringify({ products, isPremium, premiumEmail, checkInterval })
   })
 }
 
@@ -125,30 +146,38 @@ async function fetchAllowedEmails() {
   }
 }
 
-// Handle premium upgrade via email
+// Handle premium upgrade - requires logged in Chrome account
 async function handlePremiumUpgrade() {
-  const emailInput = document.getElementById('upgrade-email')
-  const email = emailInput?.value?.trim().toLowerCase()
+  // Get the currently signed-in Chrome user
+  let userEmail = ''
   
-  if (!email) {
-    alert('Please enter your email address')
+  try {
+    const userInfo = await chrome.identity.getProfileUserInfo()
+    userEmail = userInfo.email?.toLowerCase() || ''
+  } catch (e) {
+    console.log('Could not get Chrome profile info:', e)
+  }
+  
+  if (!userEmail) {
+    alert('Please sign in to Chrome with your Gmail account to verify premium access.\n\n1. Click your profile icon in Chrome\n2. Sign in or select your account\n3. Try again')
     return
   }
   
-  // Show loading
+  // Check if this Chrome email is allowed
   const btn = document.getElementById('upgrade-btn')
-  if (btn) btn.textContent = 'Checking...'
+  if (btn) btn.textContent = 'Verifying...'
   
   const allowedEmails = await fetchAllowedEmails()
   
-  if (allowedEmails.includes(email)) {
+  if (allowedEmails.includes(userEmail)) {
     isPremium = true
+    premiumEmail = userEmail  // Store the email
     await saveData()
     render()
-    alert('Premium activated! Thank you for upgrading.')
+    alert('Premium activated for ' + userEmail + '!')
   } else {
     if (btn) btn.textContent = 'Verify'
-    alert('Email not authorized for premium.\n\nTo get access, please contact developer at L104732@gmail.com')
+    alert('Premium not available for: ' + userEmail + '\n\nThis email must be added by the developer.\nContact: L104732@gmail.com')
   }
 }
 
